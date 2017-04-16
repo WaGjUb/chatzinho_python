@@ -96,7 +96,8 @@ class mc(object):
             addr = self.list_users(inp)
             enviar = "DOWNFILE [{0}] {1}".format(self.nickname, filename)
             self.local_udp.sendto(enviar.encode(), (addr, local_PORT))
-        except:
+        except Exception as e:
+            print(e) 
             print("Ocorreu algum erro para idêntificar o usuário ou enviar a solicitação")
 
     def send_list_files(self):
@@ -105,7 +106,8 @@ class mc(object):
             addr = self.list_users(inp)
             enviar = "LISTFILES [{}]".format(self.nickname)
             self.local_udp.sendto(enviar.encode(), (addr, local_PORT))
-        except:
+        except Exception as e:
+            print(e) 
             print("Ocorreu algum erro para idêntificar o usuário digitado")
 
     def receive_msgidv(self, *l):
@@ -121,7 +123,8 @@ class mc(object):
             inp = input("Digite o nome do usuário que deseja mandar msg privada: ")
             addr = self.list_users(inp)
             print("Digite \\noprivate para sair do modo de msg privada")
-        except:
+        except Exception as e:
+            print(e) 
             print("Ocorreu algum erro para idêntificar o usuário digitado")
         while msg != "\\noprivate":
             msg = "privada: " + input()
@@ -133,12 +136,15 @@ class mc(object):
         while True:
             try:
                 self.nickname = str(input("Digite seu apelido: "))             
-                for dirpath, dirnames, filenames in os.walk('.'):
+                for dirpath, dirnames, filenames in os.walk('./', topdown=True):
+                    print (filenames)
                     for f in filenames:
                         self.files[f] = os.path.getsize(f)
+                    break #para não ser recursivo
                 return True
-            except:
-                print("Apelido inválido!\nDigite um formato string")
+            except Exception as e:
+                print(e) 
+                print("Apelido inválido ou pasta vazia!\nDigite um formato string ou verifique se sua pasta contém arquivos")
 
 
     def send_group(self, enviar):
@@ -154,7 +160,8 @@ class mc(object):
             try:
                 print(msg)
                 self.reserved[msg]()
-            except:
+            except Exception as e:
+                print(e) 
                 tag = "MSG"
                 enviar = "{0} [{1}] {2}".format(tag, str(self.nickname), str(msg),)
                 self.send_group(enviar.encode())
@@ -183,20 +190,20 @@ class mc(object):
         enviar = enviar.encode()
         self.local_udp.sendto(enviar, addr)
 
+
     def receive(self): 
         while True:
             msg, sender_addr = self.udp.recvfrom(1024) #tamanho do buffer 1024
-            # exibir = list(msg.rpartition('['))
-            # exibir[2] = exibir[2][:-1]
             msg = msg.decode()
-            #print(msg.split(' ')[0])
+            print("\n---msg: {}\n".format(msg))
             func = self.reserved[msg.split(' ')[0]]
             func(sender_addr,msg)
             #Thread(target=func, args=(sender_addr, msg)).start()
             try:
                 pass
                 #Thread.start_new_thread(self.reserved[msg.split(' ')[0]], args=(sender_addr, msg))
-            except:
+            except Exception as e:
+                print(e) 
                 self.padrao_erro()
 
     def padrao_erro(self, *l):
@@ -218,7 +225,8 @@ class mc(object):
     def list_users(self, *l):
         try:
             return self.users[l[0]]
-        except:
+        except Exception as e:
+            print(e) 
             print("usuarios online: {}".format(list(self.users.keys())))
 
         
