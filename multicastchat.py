@@ -35,7 +35,7 @@ class mc(object):
         #local socket
         self.local_PORT = 6799
         self.localaddress = ''
-        self.local_adp = ('', self.local_PORT)
+        self.local_adp = ('0.0.0.0', self.local_PORT)
         #creating sockets
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -80,7 +80,7 @@ class mc(object):
         size = self.files[name]
         myaddress = (socket.gethostname(), 6791)
         enviar = "DOWNINFO [{0}, {1}, {2}, {3}]".format(name, size, IP, porta) 
-        self.local_udp.sendto(enviar.encode(), (l[0],local_PORT))
+        self.local_udp.sendto(enviar.encode(), (l[0],self.local_PORT))
         self.tcp.bind(myaddress)
         con, cliente = tcp.accept()
         f = open(name, 'rb')
@@ -99,7 +99,7 @@ class mc(object):
             addr = self.list_users(inp)
             print("O endereço obtido é: {}".format(addr))
             enviar = "DOWNFILE [{0}] {1}".format(self.nickname, filename)
-            self.local_udp.sendto(enviar.encode(), (addr, local_PORT))
+            self.local_udp.sendto(enviar.encode(), (addr[0], local_PORT))
         except Exception as e:
             print(e) 
             print("Ocorreu algum erro para idêntificar o usuário ou enviar a solicitação")
@@ -110,7 +110,7 @@ class mc(object):
             addr = self.list_users(inp)
             imprime("endereco obtido: {}".format(addr))
             enviar = "LISTFILES [{}]".format(self.nickname)
-            self.local_udp.sendto(enviar.encode(), (addr, local_PORT))
+            self.local_udp.sendto(enviar.encode(), (addr[0], local_PORT))
         except Exception as e:
             print(e) 
             print("Ocorreu algum erro para idêntificar o usuário digitado")
@@ -134,7 +134,7 @@ class mc(object):
         while msg != "\\noprivate":
             msg = "privada: " + input()
             enviar = "MSGIDV FROM [{0}] TO [{1}] {2}".format(self.nickname, inp, msg) 
-            self.local_udp.sendto(enviar.encode(), (addr, local_PORT))
+            self.local_udp.sendto(enviar.encode(), (addr[0], local_PORT))
 
     def config(self):
         testing = True
@@ -175,7 +175,7 @@ class mc(object):
     def send_files(self,addr):
         enviar = "{0} {1}".format("FILES",self.files)
         enviar = enviar.encode()
-        self.local_udp.sendto(enviar, addr)
+        self.local_udp.sendto(enviar, (addr[0],self.local_PORT))
 
     def quit(self,*l):
         enviar = "LEAVE [{}]".format(self.nickname)
@@ -192,7 +192,7 @@ class mc(object):
         print("{0} entrou no grupo".format(msg))
         enviar = "{0} [{1}]".format("JOINACK",self.nickname)
         enviar = enviar.encode()
-        self.local_udp.sendto(enviar, addr)
+        a = self.local_udp.sendto(enviar, (addr[0],self.local_PORT))
 
 
     def receive(self): 
@@ -216,7 +216,7 @@ class mc(object):
         while True:
             msg, sender_addr = self.local_udp.recvfrom(1024) #tamanho do buffer 1024
             msg = msg.decode()
-            print("\n---msg: {}\n".format(msg))
+            print("\n---LOCAL: {}\n".format(msg))
             #func = self.reserved[msg.split(' ')[0]]
             #func(sender_addr,msg)
             #Thread(target=func, args=(sender_addr, msg)).start()
@@ -239,7 +239,6 @@ class mc(object):
 
     def receive_ack(self, *l):
         #[1] = nickname [0] = ip
-        
         self.users[l[1].partition('[')[-1][:-1]] = l[0]
 
     def receive_leave(self, *l):
