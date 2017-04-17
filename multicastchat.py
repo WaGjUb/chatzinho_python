@@ -35,7 +35,7 @@ class mc(object):
         #local socket
         self.local_PORT = 6799
         self.localaddress = ''
-        self.local_adp = (self.localaddress, self.local_PORT)
+        self.local_adp = ('', self.local_PORT)
         #creating sockets
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -44,11 +44,14 @@ class mc(object):
         self.udp.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
         self.local_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.nickname = ''
-        self.reserved = {"\downfile": self.send_downfile, "DOWNFILE": self.receive_downfile, "LEAVE": self.receive_leave, "JOIN": self.send_ack, "JOINACK": self.receive_ack, "LISTFILES": self.myfiles, "FILES": self.receive_files, "DOWNINFO": self.downinfo, "MSG": self.receive_msg, "MSGIDV": self.receive_msgidv, "sair": self.quit, "\leave": self.quit, "\list": self.list_users, "\private": self.send_msgidv, "\lf": self.send_list_files}
+        self.reserved_receive = {"JOIN": self.send_ack, "MSG": self.receive_msg, "LEAVE": self.receive_leave}
+        self.reserved_receive_local= {"JOINACK": self.receive_ack, "MSGIDV": self.receive_msgidv, "LISTFILES": self.send_files, "FILES": self.receive_files, "DOWNFILE": self.send_downinfo, "DOWNINFO": self.downinfo}
+        self.reserved = {"\downfile": self.send_downfile, "sair": self.quit, "\leave": self.quit, "\list": self.list_users, "\private": self.send_msgidv, "\lf": self.send_list_files}
         
         self.files = {} ###### colocar aqui os arquivos que devem ser enviados
         self.local_udp.bind(self.local_adp)
         self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
     def receive_files(self, *l):
         recebido = l[1].replace("FILES ")
         print("Arquivos recebidos do listfile: {}".format(recebido))
@@ -72,7 +75,7 @@ class mc(object):
 
     #envia um downinfo como resposta e aguarda conexão
     ## {file1: size, file2: size2}
-    def receive_downfile(self, *l):
+    def send_downinfo(self, *l):
         name = l[1].rpartition('] ')[2]
         size = self.files[name]
         myaddress = (socket.gethostname(), 6791)
@@ -94,6 +97,7 @@ class mc(object):
             inp = input("Digite o nome do usuário que deseja baixar arquivo: ")
             filename = input("Digite o nome do arquivo que deseja baixar: ")
             addr = self.list_users(inp)
+            print("O endereço obtido é: {}".format(addr))
             enviar = "DOWNFILE [{0}] {1}".format(self.nickname, filename)
             self.local_udp.sendto(enviar.encode(), (addr, local_PORT))
         except Exception as e:
@@ -104,6 +108,7 @@ class mc(object):
         try:
             inp = input("Digite o nome do usuário que deseja listar arquivos: ")
             addr = self.list_users(inp)
+            imprime("endereco obtido: {}".format(addr))
             enviar = "LISTFILES [{}]".format(self.nickname)
             self.local_udp.sendto(enviar.encode(), (addr, local_PORT))
         except Exception as e:
@@ -122,7 +127,7 @@ class mc(object):
         try:
             inp = input("Digite o nome do usuário que deseja mandar msg privada: ")
             addr = self.list_users(inp)
-            print("Digite \\noprivate para sair do modo de msg privada")
+            print("O endereço para enviar é: {}\nDigite \\noprivate para sair do modo de msg privada".format(addr))
         except Exception as e:
             print(e) 
             print("Ocorreu algum erro para idêntificar o usuário digitado")
@@ -158,17 +163,16 @@ class mc(object):
         while True:
             msg = input()		
             try:
-                print(msg)
                 self.reserved[msg]()
             except Exception as e:
-                print(e) 
+               # print(e) 
                 tag = "MSG"
                 enviar = "{0} [{1}] {2}".format(tag, str(self.nickname), str(msg),)
                 self.send_group(enviar.encode())
         exit()
 
 ####### ver como envia arquivo
-    def myfiles(self,addr):
+    def send_files(self,addr):
         enviar = "{0} {1}".format("FILES",self.files)
         enviar = enviar.encode()
         self.local_udp.sendto(enviar, addr)
@@ -178,12 +182,12 @@ class mc(object):
         self.udp.sendto(enviar.encode(), self.group_adp)
         self.udp.close()
         self.local_udp.close()
-        exit()
+        sys.exit()
         return ('LEAVE','')
 
     def send_ack(self, *l):
         addr = l[0]
-        msg = l[1].partition("[")[2]
+        msg = l[1].partition('[')[-1]
         msg = msg.replace(']','')
         print("{0} entrou no grupo".format(msg))
         enviar = "{0} [{1}]".format("JOINACK",self.nickname)
@@ -196,11 +200,29 @@ class mc(object):
             msg, sender_addr = self.udp.recvfrom(1024) #tamanho do buffer 1024
             msg = msg.decode()
             print("\n---msg: {}\n".format(msg))
-            func = self.reserved[msg.split(' ')[0]]
-            func(sender_addr,msg)
+            #func = self.reserved[msg.split(' ')[0]]
+            #func(sender_addr,msg)
             #Thread(target=func, args=(sender_addr, msg)).start()
             try:
-                pass
+                #arg0 = endereco, arg1 = mensagem
+                self.reserved_receive[msg.split(' ')[0]](sender_addr,msg)
+
+                #Thread.start_new_thread(self.reserved[msg.split(' ')[0]], args=(sender_addr, msg))
+            except Exception as e:
+                print(e) 
+                self.padrao_erro()
+
+    def receive_local(self):
+        while True:
+            msg, sender_addr = self.local_udp.recvfrom(1024) #tamanho do buffer 1024
+            msg = msg.decode()
+            print("\n---msg: {}\n".format(msg))
+            #func = self.reserved[msg.split(' ')[0]]
+            #func(sender_addr,msg)
+            #Thread(target=func, args=(sender_addr, msg)).start()
+            try:
+                #arg0 = endereco, arg1 = mensagem
+                self.reserved_receive_local[msg.split(' ')[0]](sender_addr,msg)
                 #Thread.start_new_thread(self.reserved[msg.split(' ')[0]], args=(sender_addr, msg))
             except Exception as e:
                 print(e) 
@@ -217,10 +239,13 @@ class mc(object):
 
     def receive_ack(self, *l):
         #[1] = nickname [0] = ip
-        self.users[l[1]] = l[0]
+        
+        self.users[l[1].partition('[')[-1][:-1]] = l[0]
 
     def receive_leave(self, *l):
-        print("{} saiu".format(self.users.pop[0]))
+        usuario = l[1].partition('[')[-1][-1]
+        self.users.pop[usuario]
+        print("{} saiu".format(usuario))
 
     def list_users(self, *l):
         try:
@@ -234,5 +259,7 @@ chat = mc()
 
 Thread(target=chat.user_input).start()#chat.user_input)
 Thread(target=chat.receive).start()
+Thread(target=chat.receive_local).start()
 #Thread.start_new_thread(chat.receive_ack)
+
 
