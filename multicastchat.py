@@ -200,6 +200,7 @@ class mc(object):
         enviar = "{0} [{1}]".format("JOINACK",self.nickname)
         enviar = enviar.encode()
         a = self.local_udp.sendto(enviar, (addr[0],self.local_PORT))
+        self.users[l[1].partition('[')[-1][:-1]] = l[0]
 
 
     def receive(self): 
@@ -252,9 +253,7 @@ class mc(object):
         self.users[l[1].partition('[')[-1][:-1]] = l[0]
 
     def receive_leave(self, *l):
-        print("chamou")
-        print(l)
-        usuario = l[1].partition('[')[-1][-1]
+        usuario = l[1].partition('[')[-1][:-1]
         self.users.pop[usuario]
         print("{} saiu".format(usuario))
 
