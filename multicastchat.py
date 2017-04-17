@@ -254,7 +254,7 @@ class mc(object):
 
     def receive_leave(self, *l):
         usuario = l[1].partition('[')[-1][:-1]
-        self.users.pop[usuario]
+        self.users.pop(usuario)
         print("{} saiu".format(usuario))
 
     def list_users(self, *l):
