@@ -231,8 +231,8 @@ class mc(object):
             #Thread(target=func, args=(sender_addr, msg)).start()
             try:
                 #arg0 = endereco, arg1 = mensagem
-                Thread(target=self.reserved_receive_local[msg.split(' ')[0]], args=([sender_addr, msg]))
-                ####self.reserved_receive_local[msg.split(' ')[0]](sender_addr,msg)
+                #Thread(target=self.reserved_receive_local[msg.split(' ')[0]], args=(sender_addr, msg))
+                self.reserved_receive_local[msg.split(' ')[0]](sender_addr,msg)
 
             except Exception as e:
                 print(e) 
