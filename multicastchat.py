@@ -72,7 +72,7 @@ class mc(object):
         l = self.tcp.recv(1024)
         while (l):
             fo.write(l)
-            l.self.tcp.recv(1024)
+            l = self.tcp.recv(1024)
         fo.close()
         l.self.tcp.close()
 
